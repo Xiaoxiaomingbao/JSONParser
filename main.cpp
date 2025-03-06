@@ -20,13 +20,15 @@ struct JSONObject {
     , std::unordered_map<std::string, JSONObject>  // {"hello": 23, "world": 24}
     > inner;
 
-    void do_print() const {
+    void do_print() const
+    {
         printnl(inner);
     }
 };
 
 template <class T>
-std::optional<T> try_parse_num(std::string_view str) {
+std::optional<T> try_parse_num(std::string_view str)
+{
     // std::optional<T> 仅有两种可能：T 类型的值或 std::nullopt
     T value;
     auto res = std::from_chars(str.data(), str.data() + str.size(), value);
@@ -34,18 +36,21 @@ std::optional<T> try_parse_num(std::string_view str) {
     // res.ec 是一个枚举值，表示转换的错误代码
     // std::errc 是一个枚举类，定义了多个与错误相关的常量；std::errc() 是该枚举类的默认构造函数，它返回一个值，表示“没有错误”
     // res.ptr 是指向字符串中最后解析的字符的指针
-    if (res.ec == std::errc() && res.ptr == str.data() + str.size()) {
+    if (res.ec == std::errc() && res.ptr == str.data() + str.size())
+    {
         return value;
     }
     return std::nullopt;
 }
 
-JSONObject parse(std::string_view json) {
-   if (json.empty()) {
+JSONObject parse(std::string_view json)
+{
+    if (json.empty())
+    {
         return JSONObject{std::nullptr_t{}};
-   }
-   if ('0' <= json[0] && json[0] <= '9' || json[0] == '+' || json[0] == '-')
-   {
+    }
+    if ('0' <= json[0] && json[0] <= '9' || json[0] == '+' || json[0] == '-')
+    {
         std::regex num_re{"[+-]?[0-9]+(\\.[0-9]+)?([eE][+-]?[0-9]+)?"};
         std::cmatch match;
         if (std::regex_search(json.data(), json.data() + json.size(), match, num_re))
@@ -60,14 +65,29 @@ JSONObject parse(std::string_view json) {
                 return JSONObject{num.value()};
             }
         }
-   }
-   return JSONObject{std::nullptr_t{}};
+    }
+    if ('"' == json[0])
+    {
+        size_t next_quotation = json.find('"', 1);
+        // substr() 第二个参数为长度，不是下标
+        // 丢弃输入中自带的双引号
+        std::string str{json.substr(1, next_quotation - 1)};
+        return JSONObject{std::move(str)};
+    }
+    return JSONObject{std::nullptr_t{}};
 }
 
-int main() {
-    std::string_view json1 = "3";
+int main()
+{
+    std::string_view json1 = "-7";
     print(parse(json1));
     std::string_view json2 = "3.14";
     print(parse(json2));
+    std::string_view json3 = "-2.5e2";
+    print(parse(json3));
+    std::string_view json4 = "\"hello\"";
+    print(parse(json4));
+    std::string_view json5 = "\"Hello\nWorld!\"";
+    print(parse(json5));
     return 0;
 }
