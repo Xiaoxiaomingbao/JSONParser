@@ -88,6 +88,35 @@ std::pair<JSONObject, size_t> parse(std::string_view json)
             }
         }
         return {JSONObject{std::move(res)}, i};
+    } else if (json[0] == '{') {
+        std::unordered_map<std::string, JSONObject> res;
+        size_t i;
+        for (i = 1; i < json.size();) {
+            if (json[i] == '}') {
+                i++;
+                break;
+            }
+            auto [key, len] = parse(json.substr(i));
+            if (len == 0) {
+                print("Error: invalid json object");
+                break;
+            }
+            i += len;
+            while (json[i] == ' ' || json[i] == ':') {
+                i++;
+            }
+            auto [value, len2] = parse(json.substr(i));
+            if (len2 == 0) {
+                print("Error: invalid json object");
+                break;
+            }
+            res[std::get<std::string>(key.inner)] = value;
+            i += len2;
+            while (json[i] == ',' || json[i] == ' ') {
+                i++;
+            }
+        }
+        return {JSONObject{std::move(res)}, i};
     }
     return {JSONObject{std::nullptr_t{}}, 0};
 }
@@ -112,5 +141,12 @@ int main()
     print(parse(json_array).first);
     json_array = "[123, 1.23, \"hello]world\", -5]";
     print(parse(json_array).first);
+
+    std::string_view json_object = "{\"hello\": 23, \"world\": 24}";
+    print(parse(json_object).first);
+    json_object = "{\"hello\": 23, \"world\": [1, 2, 3]}";
+    print(parse(json_object).first);
+    json_object = "{\"hello\": 23, \"world\": {\"a\": 1, \"b\": 2}}";
+    print(parse(json_object).first);
     return 0;
 }
